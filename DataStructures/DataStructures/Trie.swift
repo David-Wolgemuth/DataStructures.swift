@@ -11,9 +11,27 @@ import Foundation
 public class Trie<Element>
 {
     private var root = Node<Element>(letter: Character(" "))
+    
     public init()
     {
         
+    }
+    public static func alphaCompareString(strA: String, LessThanOrEqualToString strB: String) -> Bool
+    {
+        let charsA: [Character] = Array(strA.characters)
+        let charsB: [Character] = Array(strB.characters)
+        
+        var i = 0
+        while i < charsA.count && i < charsB.count {
+            if charsA[i] < charsB[i] {
+                return true
+            }
+            if charsA[i] > charsB[i] {
+                return false
+            }
+            i += 1
+        }
+        return charsA.count <= charsB.count
     }
     public func upsertKey(key: String, withValue value: Element)
     {
@@ -21,8 +39,8 @@ public class Trie<Element>
         if letters.count == 0 {
             return
         }
-        let node = root.findChildAtKey(letters, index: -1, upsert: true)!
-        node.value = value
+        let node = root.findChildAtKey(letters, upsert: true)!
+        node.keyValuePair = KVP(key: key, value: value)
     }
     public func valueAtKey(key: String) -> Element?
     {
@@ -30,25 +48,63 @@ public class Trie<Element>
         if letters.count == 0 {
             return nil
         }
-        if let node = root.findChildAtKey(letters, index: -1, upsert: false) {
-            return node.value
+        if let node = root.findChildAtKey(letters) {
+            return node.keyValuePair?.value
         }
         return nil
+    }
+    public func isEmpty() -> Bool
+    {
+        return root.children.count == 0
+    }
+    public func first() -> KVP<Element>?
+    {
+        if isEmpty() {
+            return nil
+        }
+        var node = root
+        while node.children.count > 0 && node.keyValuePair == nil {
+            node = node.children[0]
+        }
+        return node.keyValuePair
+    }
+    public func getKeys() -> [String]
+    {
+        var keys = [String]()
+        getKeys(fromNode: root, addToKeys: &keys)
+        return keys
+    }
+    public func keyExistsBeginningWithString(string: String) -> Bool
+    {
+        return false
+    }
+    private func getKeys(fromNode node: Node<Element>, existingKey key: String="", inout addToKeys keys: [String])
+    {
+        var key = key
+        if key != "" || node.letter != " " {
+            key = key + String(node.letter)
+        }
+        if node.keyValuePair != nil {
+            keys.append(key)
+        }
+        for child in node.children {
+            getKeys(fromNode: child, existingKey: key, addToKeys: &keys)
+        }
     }
 }
 
 private class Node<Element>
 {
     let letter: Character
-    var value: Element?
+    var keyValuePair: KVP<Element>?
     var children = [Node<Element>]()
-    
-    init(letter: Character, value: Element?=nil)
+
+    init(letter: Character, kvp: KVP<Element>?=nil)
     {
         self.letter = letter
-        self.value = value
+        self.keyValuePair = kvp
     }
-    func findChildAtKey(key: [Character], index: Int, upsert: Bool) -> Node<Element>?
+    func findChildAtKey(key: [Character], index: Int=(-1), upsert: Bool=false, childMustHaveKVP: Bool=false) -> Node<Element>?
     {
         if index >= key.count {
             return nil
@@ -64,9 +120,19 @@ private class Node<Element>
         }
         if upsert {
             let child = Node<Element>(letter: key[index])
-            children.append(child)
+            addChildSorted(child)
             return child.findChildAtKey(key, index: index, upsert: upsert)
         }
         return nil
+    }
+    func addChildSorted(child: Node<Element>)
+    {
+        children.append(child)
+        var i = children.count-2
+        while i >= 0 && child.letter < children[i].letter {
+            children[i+1] = children[i]
+            i -= 1
+        }
+        children[i+1] = child
     }
 }
