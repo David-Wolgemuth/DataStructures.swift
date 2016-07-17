@@ -33,7 +33,7 @@ public class Trie<Element>
         }
         return charsA.count <= charsB.count
     }
-    public func upsertKey(key: String, withValue value: Element)
+    public func upsert(key key: String, withValue value: Element)
     {
         let letters: [Character] = Array(key.characters)
         if letters.count == 0 {
@@ -76,7 +76,17 @@ public class Trie<Element>
     }
     public func keyExistsBeginningWithString(string: String) -> Bool
     {
-        return false
+        let letters: [Character] = Array(string.characters)
+        var found: [KVP<Element>] = []
+        root.findAllChildrenStartingWithKey(letters, foundChildren: &found)
+        return found.count > 0
+    }
+    public func allKVPsBeginningWithString(string: String) -> [KVP<Element>]
+    {
+        let letters: [Character] = Array(string.characters)
+        var found: [KVP<Element>] = []
+        root.findAllChildrenStartingWithKey(letters, foundChildren: &found)
+        return found
     }
     private func getKeys(fromNode node: Node<Element>, existingKey key: String="", inout addToKeys keys: [String])
     {
@@ -104,7 +114,7 @@ private class Node<Element>
         self.letter = letter
         self.keyValuePair = kvp
     }
-    func findChildAtKey(key: [Character], index: Int=(-1), upsert: Bool=false, childMustHaveKVP: Bool=false) -> Node<Element>?
+    func findChildAtKey(key: [Character], index: Int=(-1), upsert: Bool=false) -> Node<Element>?
     {
         if index >= key.count {
             return nil
@@ -124,6 +134,25 @@ private class Node<Element>
             return child.findChildAtKey(key, index: index, upsert: upsert)
         }
         return nil
+    }
+    func findAllChildrenStartingWithKey(key: [Character], index: Int=(-1), inout foundChildren found: [KVP<Element>])
+    {
+        if index != -1 {
+            if index < key.count-1 {
+                if key[index] != letter {
+                    return
+                }
+            } else if index >= key.count || key[index] == letter {
+                if let kvp = keyValuePair {
+                    found.append(kvp)
+                }
+            } else {
+                return
+            }
+        }
+        for child in children {
+            child.findAllChildrenStartingWithKey(key, index: index + 1, foundChildren: &found)
+        }
     }
     func addChildSorted(child: Node<Element>)
     {

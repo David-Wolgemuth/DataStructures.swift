@@ -29,7 +29,7 @@ class TrieTests: XCTestCase
     func testInsertionAndRetrieval()
     {
         for pair in pairs {
-            trie.upsertKey(pair.key, withValue: pair.value)
+            trie.upsert(key: pair.key, withValue: pair.value)
             if pair.key.characters.count > 0 {
                 XCTAssertEqual(trie.valueAtKey(pair.key), pair.value)
             } else {
@@ -40,13 +40,13 @@ class TrieTests: XCTestCase
     func testUpdatesIfExistingKey()
     {
         for pair in pairs {
-            trie.upsertKey(pair.key, withValue: pair.value)
+            trie.upsert(key: pair.key, withValue: pair.value)
         }
         for pair in pairs {
             if pair.key.characters.count == 0 {
                 continue
             }
-            trie.upsertKey(pair.key, withValue: pair.value * -1)
+            trie.upsert(key: pair.key, withValue: pair.value * -1)
             XCTAssertEqual(trie.valueAtKey(pair.key), pair.value * -1)
         }
     }
@@ -70,7 +70,7 @@ class TrieTests: XCTestCase
     func testGetKeysInOrder()
     {
         for pair in pairs {
-            trie.upsertKey(pair.key, withValue: pair.value)
+            trie.upsert(key: pair.key, withValue: pair.value)
         }
         let keys = trie.getKeys()
         for i in 0..<keys.count-1 {
@@ -81,7 +81,7 @@ class TrieTests: XCTestCase
     func testGetFirstElement()
     {
         for pair in pairs {
-            trie.upsertKey(pair.key, withValue: pair.value)
+            trie.upsert(key: pair.key, withValue: pair.value)
         }
         let keys = trie.getKeys()
         for i in 0..<keys.count {
@@ -91,6 +91,47 @@ class TrieTests: XCTestCase
                 XCTAssertEqual(value, trie.first()?.value)
                 return
             }
+        }
+    }
+    func testKeyExistsBeginningWithString()
+    {
+        var set = Set<String>()
+        for pair in pairs {
+            if !set.contains(pair.key) {
+                set.insert(pair.key)
+                trie.upsert(key: pair.key, withValue: pair.value)
+            }
+        }
+        for pair in pairs {
+            let characters: [Character] = Array(pair.key.characters)
+            if characters.count != 0 {
+                trie.upsert(key: String(characters[0]), withValue: 24)
+                let val = trie.valueAtKey(String(characters[0]))
+                XCTAssertEqual(val, 24)
+            }
+            var str = ""
+            for char in characters {
+                str += String(char)
+                XCTAssertTrue(trie.keyExistsBeginningWithString(str))
+                let kvps = trie.allKVPsBeginningWithString(str)
+                var contains = false
+                for kvp in kvps {
+                    if kvp.key == pair.key {
+                        contains = true; break
+                    }
+                }
+                XCTAssertTrue(contains)
+            }
+            var infinity = 10000
+            var willReject = false
+            while !willReject || infinity == 0 {
+                str = Random.string(3)
+                if !trie.keyExistsBeginningWithString(str) && trie.allKVPsBeginningWithString(str).count == 0 {
+                    willReject = true
+                }
+                infinity -= 1
+            }
+            XCTAssertTrue(willReject)
         }
     }
 }
